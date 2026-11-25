@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-25
+
 ### Added
 
 - Smart Meter Texas account: username and password, connection test from the
@@ -28,4 +30,5 @@ the notes of the version's GitHub Release.
   United States.
 - English, French, German and Spanish texts and user documentation.
 
-[Unreleased]: https://github.com/gboulvin/Gladys-SmartMeterTexas/commits/main
+[Unreleased]: https://github.com/gboulvin/Gladys-SmartMeterTexas/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/gboulvin/Gladys-SmartMeterTexas/releases/tag/v1.0.0
