@@ -1,0 +1,558 @@
+{
+  "manifest_version": 1,
+  "type": "device",
+  "name": "Smart Meter Texas",
+  "description": {
+    "en": "Electricity meter reads and daily usage from the Smart Meter Texas portal.",
+    "fr": "Relevés et consommation quotidienne d'électricité depuis Smart Meter Texas.",
+    "de": "Zählerstände und täglicher Stromverbrauch aus dem Smart-Meter-Texas-Portal.",
+    "es": "Lecturas del contador y consumo eléctrico diario desde Smart Meter Texas."
+  },
+  "version": "0.0.0",
+  "docker_image": "ghcr.io/gboulvin/gladys-smartmetertexas:0.0.0",
+  "gladys_version": ">=5.3.0",
+  "cover_image": "https://raw.githubusercontent.com/gboulvin/Gladys-SmartMeterTexas/main/cover.png",
+  "categories": ["energy"],
+  "keywords": [
+    "Smart Meter Texas",
+    "SMT",
+    "ESIID",
+    "ERCOT",
+    "Oncor",
+    "CenterPoint",
+    "AEP Texas",
+    "TNMP",
+    "Texas",
+    "electricity"
+  ],
+  "countries": ["US"],
+  "transports": ["cloud"],
+  "config_schema": [
+    {
+      "key": "intro",
+      "type": "section",
+      "label": {
+        "en": "Your Smart Meter Texas account",
+        "fr": "Votre compte Smart Meter Texas",
+        "de": "Ihr Smart-Meter-Texas-Konto",
+        "es": "Su cuenta de Smart Meter Texas"
+      },
+      "description": {
+        "en": "Use the username and password of the smartmetertexas.com portal (not those of your retail electric provider). The integration reads your meters through the cloud: an on-demand read takes up to 5 minutes, and Smart Meter Texas allows two per hour.",
+        "fr": "Utilisez l'identifiant et le mot de passe du portail smartmetertexas.com (pas ceux de votre fournisseur d'électricité). L'intégration relève vos compteurs via le cloud : un relevé à la demande prend jusqu'à 5 minutes, et Smart Meter Texas en autorise deux par heure.",
+        "de": "Verwenden Sie Benutzername und Passwort des Portals smartmetertexas.com (nicht die Ihres Stromanbieters). Die Integration liest Ihre Zähler über die Cloud: eine Ablesung auf Anfrage dauert bis zu 5 Minuten, Smart Meter Texas erlaubt zwei pro Stunde.",
+        "es": "Use el usuario y la contraseña del portal smartmetertexas.com (no los de su proveedor de electricidad). La integración lee sus contadores a través de la nube: una lectura bajo demanda tarda hasta 5 minutos y Smart Meter Texas permite dos por hora."
+      },
+      "links": [
+        {
+          "url": "https://www.smartmetertexas.com",
+          "label": {
+            "en": "Smart Meter Texas portal",
+            "fr": "Portail Smart Meter Texas",
+            "de": "Smart-Meter-Texas-Portal",
+            "es": "Portal de Smart Meter Texas"
+          }
+        }
+      ]
+    },
+    {
+      "key": "username",
+      "type": "string",
+      "label": {
+        "en": "Username",
+        "fr": "Identifiant",
+        "de": "Benutzername",
+        "es": "Usuario"
+      },
+      "placeholder": {
+        "en": "Your smartmetertexas.com username",
+        "fr": "Votre identifiant smartmetertexas.com",
+        "de": "Ihr Benutzername bei smartmetertexas.com",
+        "es": "Su usuario de smartmetertexas.com"
+      },
+      "required": true
+    },
+    {
+      "key": "password",
+      "type": "secret",
+      "label": {
+        "en": "Password",
+        "fr": "Mot de passe",
+        "de": "Passwort",
+        "es": "Contraseña"
+      },
+      "required": true
+    },
+    {
+      "key": "refresh_interval",
+      "type": "number",
+      "label": {
+        "en": "Meter read interval (min)",
+        "fr": "Intervalle de relevé (min)",
+        "de": "Ableseintervall (Min.)",
+        "es": "Intervalo de lectura (min)"
+      },
+      "description": {
+        "en": "Minutes between two on-demand reads of each meter (30 minimum: Smart Meter Texas allows two reads per hour).",
+        "fr": "Minutes entre deux relevés à la demande de chaque compteur (30 minimum : Smart Meter Texas autorise deux relevés par heure).",
+        "de": "Minuten zwischen zwei Ablesungen auf Anfrage pro Zähler (mindestens 30: Smart Meter Texas erlaubt zwei pro Stunde).",
+        "es": "Minutos entre dos lecturas bajo demanda de cada contador (30 como mínimo: Smart Meter Texas permite dos por hora)."
+      },
+      "required": false,
+      "default": 60,
+      "min": 30,
+      "max": 1440
+    },
+    {
+      "key": "daily_usage",
+      "type": "boolean",
+      "label": {
+        "en": "Fetch yesterday's usage",
+        "fr": "Récupérer la consommation de la veille",
+        "de": "Verbrauch von gestern abrufen",
+        "es": "Obtener el consumo de ayer"
+      },
+      "description": {
+        "en": "Once a day, download the 15-minute data of the previous day: consumption and surplus generation sent to the grid.",
+        "fr": "Une fois par jour, télécharge les données au quart d'heure de la veille : consommation et surplus de production injecté sur le réseau.",
+        "de": "Einmal täglich die 15-Minuten-Daten des Vortags laden: Verbrauch und ins Netz eingespeister Überschuss.",
+        "es": "Una vez al día, descarga los datos cada 15 minutos del día anterior: consumo y excedente de generación vertido a la red."
+      },
+      "required": false,
+      "default": true
+    }
+  ],
+  "actions": [
+    {
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
+      "timeout_seconds": 30
+    },
+    {
+      "key": "read_meter",
+      "label": {
+        "en": "Read a meter now",
+        "fr": "Relever un compteur maintenant",
+        "de": "Zähler jetzt ablesen",
+        "es": "Leer un contador ahora"
+      },
+      "description": {
+        "en": "Ask Smart Meter Texas for an on-demand read (up to 5 minutes).",
+        "fr": "Demande un relevé à Smart Meter Texas (jusqu'à 5 minutes).",
+        "de": "Fordert eine Ablesung bei Smart Meter Texas an (bis zu 5 Minuten).",
+        "es": "Solicita una lectura a Smart Meter Texas (hasta 5 minutos)."
+      },
+      "timeout_seconds": 120,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Meter",
+            "fr": "Compteur",
+            "de": "Zähler",
+            "es": "Contador"
+          },
+          "required": true
+        }
+      ]
+    }
+  ],
+  "scene_triggers": [
+    {
+      "key": "meter_read",
+      "label": {
+        "en": "New meter reading",
+        "fr": "Nouveau relevé du compteur",
+        "de": "Neuer Zählerstand",
+        "es": "Nueva lectura del contador"
+      },
+      "description": {
+        "en": "Smart Meter Texas returned a new on-demand read of a meter.",
+        "fr": "Smart Meter Texas a renvoyé un nouveau relevé d'un compteur.",
+        "de": "Smart Meter Texas hat eine neue Ablesung eines Zählers geliefert.",
+        "es": "Smart Meter Texas devolvió una nueva lectura de un contador."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Meter",
+            "fr": "Compteur",
+            "de": "Zähler",
+            "es": "Contador"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "reading",
+          "type": "number",
+          "label": {
+            "en": "Meter reading (kWh)",
+            "fr": "Index (kWh)",
+            "de": "Zählerstand (kWh)",
+            "es": "Lectura (kWh)"
+          }
+        },
+        {
+          "key": "consumed_since_last",
+          "type": "number",
+          "label": {
+            "en": "Used since the previous read (kWh)",
+            "fr": "Consommé depuis le relevé précédent (kWh)",
+            "de": "Verbrauch seit der letzten Ablesung (kWh)",
+            "es": "Consumido desde la lectura anterior (kWh)"
+          }
+        },
+        {
+          "key": "read_at",
+          "type": "string",
+          "label": {
+            "en": "Time of the read",
+            "fr": "Heure du relevé",
+            "de": "Zeitpunkt der Ablesung",
+            "es": "Hora de la lectura"
+          }
+        }
+      ]
+    },
+    {
+      "key": "daily_usage_available",
+      "label": {
+        "en": "Daily usage available",
+        "fr": "Consommation du jour disponible",
+        "de": "Tagesverbrauch verfügbar",
+        "es": "Consumo diario disponible"
+      },
+      "description": {
+        "en": "The 15-minute data of a past day arrived for a meter.",
+        "fr": "Les données au quart d'heure d'un jour passé sont arrivées pour un compteur.",
+        "de": "Die 15-Minuten-Daten eines vergangenen Tages sind für einen Zähler da.",
+        "es": "Llegaron los datos cada 15 minutos de un día pasado para un contador."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Meter",
+            "fr": "Compteur",
+            "de": "Zähler",
+            "es": "Contador"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "consumption",
+          "type": "number",
+          "label": {
+            "en": "Consumption (kWh)",
+            "fr": "Consommation (kWh)",
+            "de": "Verbrauch (kWh)",
+            "es": "Consumo (kWh)"
+          }
+        },
+        {
+          "key": "surplus",
+          "type": "number",
+          "label": {
+            "en": "Surplus generation (kWh)",
+            "fr": "Surplus de production (kWh)",
+            "de": "Erzeugungsüberschuss (kWh)",
+            "es": "Excedente de generación (kWh)"
+          }
+        },
+        {
+          "key": "date",
+          "type": "string",
+          "label": {
+            "en": "Day (YYYY-MM-DD)",
+            "fr": "Jour (AAAA-MM-JJ)",
+            "de": "Tag (JJJJ-MM-TT)",
+            "es": "Día (AAAA-MM-DD)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "meter_read_failed",
+      "label": {
+        "en": "Meter read failed",
+        "fr": "Échec du relevé",
+        "de": "Ablesung fehlgeschlagen",
+        "es": "Lectura fallida"
+      },
+      "description": {
+        "en": "Smart Meter Texas could not read a meter (login, rate limit, timeout).",
+        "fr": "Smart Meter Texas n'a pas pu relever un compteur (connexion, limite, délai).",
+        "de": "Smart Meter Texas konnte einen Zähler nicht ablesen (Anmeldung, Limit, Zeitüberschreitung).",
+        "es": "Smart Meter Texas no pudo leer un contador (acceso, límite, tiempo agotado)."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Meter",
+            "fr": "Compteur",
+            "de": "Zähler",
+            "es": "Contador"
+          }
+        },
+        {
+          "key": "error",
+          "type": "multi_select",
+          "label": {
+            "en": "Reason",
+            "fr": "Raison",
+            "de": "Grund",
+            "es": "Motivo"
+          },
+          "options": [
+            {
+              "value": "auth",
+              "label": {
+                "en": "Login refused",
+                "fr": "Connexion refusée",
+                "de": "Anmeldung abgelehnt",
+                "es": "Acceso rechazado"
+              }
+            },
+            {
+              "value": "rate_limit",
+              "label": {
+                "en": "Rate limit",
+                "fr": "Limite de requêtes",
+                "de": "Anfragelimit",
+                "es": "Límite de solicitudes"
+              }
+            },
+            {
+              "value": "timeout",
+              "label": {
+                "en": "Meter did not answer",
+                "fr": "Le compteur n'a pas répondu",
+                "de": "Zähler antwortet nicht",
+                "es": "El contador no respondió"
+              }
+            },
+            {
+              "value": "api",
+              "label": {
+                "en": "Service unreachable",
+                "fr": "Service injoignable",
+                "de": "Dienst nicht erreichbar",
+                "es": "Servicio inaccesible"
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "error",
+          "type": "string",
+          "label": {
+            "en": "Reason",
+            "fr": "Raison",
+            "de": "Grund",
+            "es": "Motivo"
+          }
+        }
+      ]
+    }
+  ],
+  "scene_actions": [
+    {
+      "key": "request_meter_read",
+      "label": {
+        "en": "Read a meter",
+        "fr": "Relever un compteur",
+        "de": "Zähler ablesen",
+        "es": "Leer un contador"
+      },
+      "description": {
+        "en": "On-demand read; waits up to 100 s, then keeps reading in the background.",
+        "fr": "Relevé à la demande ; attend 100 s au plus, puis continue en arrière-plan.",
+        "de": "Ablesung auf Anfrage; wartet bis zu 100 s, dann im Hintergrund weiter.",
+        "es": "Lectura bajo demanda; espera hasta 100 s y sigue en segundo plano."
+      },
+      "timeout_seconds": 120,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Meter",
+            "fr": "Compteur",
+            "de": "Zähler",
+            "es": "Contador"
+          },
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "completed",
+          "type": "boolean",
+          "label": {
+            "en": "Read completed",
+            "fr": "Relevé terminé",
+            "de": "Ablesung abgeschlossen",
+            "es": "Lectura completada"
+          }
+        },
+        {
+          "key": "reading",
+          "type": "number",
+          "label": {
+            "en": "Meter reading (kWh)",
+            "fr": "Index (kWh)",
+            "de": "Zählerstand (kWh)",
+            "es": "Lectura (kWh)"
+          }
+        },
+        {
+          "key": "read_at",
+          "type": "string",
+          "label": {
+            "en": "Time of the read",
+            "fr": "Heure du relevé",
+            "de": "Zeitpunkt der Ablesung",
+            "es": "Hora de la lectura"
+          }
+        }
+      ]
+    },
+    {
+      "key": "refresh_daily_usage",
+      "label": {
+        "en": "Get the usage of a past day",
+        "fr": "Obtenir la consommation d'un jour passé",
+        "de": "Verbrauch eines vergangenen Tages abrufen",
+        "es": "Obtener el consumo de un día pasado"
+      },
+      "description": {
+        "en": "Downloads the 15-minute data of a past day and returns its totals.",
+        "fr": "Télécharge les données au quart d'heure d'un jour passé et renvoie ses totaux.",
+        "de": "Lädt die 15-Minuten-Daten eines vergangenen Tages und liefert die Summen.",
+        "es": "Descarga los datos cada 15 minutos de un día pasado y devuelve sus totales."
+      },
+      "timeout_seconds": 60,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Meter",
+            "fr": "Compteur",
+            "de": "Zähler",
+            "es": "Contador"
+          },
+          "required": true
+        },
+        {
+          "key": "days_ago",
+          "type": "number",
+          "label": {
+            "en": "Days ago",
+            "fr": "Il y a (jours)",
+            "de": "Vor (Tagen)",
+            "es": "Hace (días)"
+          },
+          "default": 1,
+          "min": 1,
+          "max": 30
+        }
+      ],
+      "outputs": [
+        {
+          "key": "available",
+          "type": "boolean",
+          "label": {
+            "en": "Data available",
+            "fr": "Données disponibles",
+            "de": "Daten verfügbar",
+            "es": "Datos disponibles"
+          }
+        },
+        {
+          "key": "consumption",
+          "type": "number",
+          "label": {
+            "en": "Consumption (kWh)",
+            "fr": "Consommation (kWh)",
+            "de": "Verbrauch (kWh)",
+            "es": "Consumo (kWh)"
+          }
+        },
+        {
+          "key": "surplus",
+          "type": "number",
+          "label": {
+            "en": "Surplus generation (kWh)",
+            "fr": "Surplus de production (kWh)",
+            "de": "Erzeugungsüberschuss (kWh)",
+            "es": "Excedente de generación (kWh)"
+          }
+        },
+        {
+          "key": "date",
+          "type": "string",
+          "label": {
+            "en": "Day (YYYY-MM-DD)",
+            "fr": "Jour (AAAA-MM-JJ)",
+            "de": "Tag (JJJJ-MM-TT)",
+            "es": "Día (AAAA-MM-DD)"
+          }
+        }
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "key": "meter_overview",
+      "label": {
+        "en": "Smart Meter Texas",
+        "fr": "Smart Meter Texas",
+        "de": "Smart Meter Texas",
+        "es": "Smart Meter Texas"
+      },
+      "description": {
+        "en": "Meter reading, yesterday's usage and hourly profile, with a Read now button.",
+        "fr": "Index, consommation et profil horaire de la veille, avec un bouton Relever.",
+        "de": "Zählerstand, Verbrauch und Stundenprofil von gestern, mit Ablese-Knopf.",
+        "es": "Lectura, consumo y perfil horario de ayer, con un botón Leer ahora."
+      },
+      "icon": "activity",
+      "action_timeout_seconds": 15,
+      "settings": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Meter",
+            "fr": "Compteur",
+            "de": "Zähler",
+            "es": "Contador"
+          }
+        }
+      ]
+    }
+  ]
+}
